@@ -13,6 +13,7 @@ import xlwings as xw
 import pyodbc
 import logging
 import subprocess
+import sys
 
 
 def to_eng():
@@ -403,7 +404,9 @@ class ReportGenerator:
             self.entry_excise.configure(state='disabled')
             self.excise_frame.configure(border_color=self.colors.border_color_base)
 
-        elif barcode_len == 13 and barcode.isdigit():
+        elif (barcode_len == 13 or barcode_len == 12) and barcode.isdigit():
+            if barcode_len == 12:
+                self.entry_barcode.insert(0, 0)
             self.barcode_frame.configure(border_color=self.colors.border_color_green)
             self.entry_excise.configure(state='normal')
             self.entry_excise.configure(fg_color=self.colors.fg_color_enable)
@@ -493,9 +496,12 @@ class ReportGenerator:
         elif excise_len == 0:
             self.excise_frame.configure(border_color=self.colors.border_color_yellow)
 
-        elif excise_len == 13 and excise.isdigit():
+        elif (excise_len == 13 or excise_len == 12) and excise.isdigit():
             self.entry_barcode.delete(0, tk.END)
-            self.entry_barcode.insert(0, excise)
+            if excise_len == 12:
+                self.entry_barcode.insert(0, f'{0}{excise}')
+            else:
+                self.entry_barcode.insert(0, excise)
             self.entry_excise.delete(0, tk.END)
             self.excise_frame.configure(border_color=self.colors.border_color_yellow)
             self.show_notification(f'Баркод обновлён', label_bg=self.colors.notification_color_yellow)
