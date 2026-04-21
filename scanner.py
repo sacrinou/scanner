@@ -13,7 +13,6 @@ import xlwings as xw
 import pyodbc
 import logging
 import subprocess
-import sys
 
 
 def to_eng():
@@ -97,11 +96,15 @@ class ThemeColors:
 
 class DatabaseManager:
     def __init__(self):
-        self.SQL_SERVER = 'сервер'
-        self.SQL_DB = 'база данных (не таблица)'
-        self.SQL_USER = 'юзер бд'
-        self.SQL_PASSWORD = 'пароль'
-        self.conn_str = f'DRIVER={{SQL Server}};SERVER={self.SQL_SERVER};DATABASE={self.SQL_DB};UID={self.SQL_USER};PWD={self.SQL_PASSWORD}'
+        self.SQL_SERVER = r'SQL_SERVER'
+        self.SQL_DB = 'SQL_DB'
+        self.SQL_USER = 'SQL_USER'
+        self.SQL_PASSWORD = 'SQL_PASSWORD'
+        self.conn_str = (f'DRIVER={{SQL Server}};'
+                         f'SERVER={self.SQL_SERVER};'
+                         f'DATABASE={self.SQL_DB};'
+                         f'UID={self.SQL_USER};'
+                         f'PWD={self.SQL_PASSWORD}')
 
     def check_connection(self):
         try:
@@ -322,10 +325,12 @@ class ReportGenerator:
             # проверка уникальности
             if not self.db.check_connection():
                 self.update_connection_indicator()
-                self.show_notification(f'Нет соединения с БД', label_bg=self.colors.notification_color_red)
+                self.show_notification(f'Нет соединения с БД',
+                                       label_bg=self.colors.notification_color_red)
                 return False
             if self.db.check_exists(excise):
-                self.show_notification(f'Данный акциз уже существует', label_bg=self.colors.notification_color_red)
+                self.show_notification(f'Данный акциз уже существует',
+                                       label_bg=self.colors.notification_color_red)
                 return 'exist'
 
             # получаем данные о пользователе и компьютере
@@ -347,7 +352,8 @@ class ReportGenerator:
                 os.remove(test_file)
             except Exception as e:
                 logging.error(f'Ошибка доступа к папке: {e}')
-                self.show_notification(f'Нет доступа к папке с QR', label_bg=self.colors.notification_color_red)
+                self.show_notification(f'Нет доступа к папке с QR',
+                                       label_bg=self.colors.notification_color_red)
                 return False
 
             # генерируем qr
@@ -366,14 +372,17 @@ class ReportGenerator:
 
             # отправляем insert
             if self.db.add_record(barcode, excise, user_name, computer_name, qr_name, created_date):
-                self.show_notification(f'Данные успешно добавлены', label_bg=self.colors.notification_color_green)
+                self.show_notification(f'Данные успешно добавлены',
+                                       label_bg=self.colors.notification_color_green)
             else:
-                self.show_notification(f'Ошибка в insert запросе', label_bg=self.colors.notification_color_red)
+                self.show_notification(f'Ошибка в insert запросе',
+                                       label_bg=self.colors.notification_color_red)
 
             return True
         except Exception as e:
             logging.error(f'Ошибка в отправке данных: {e}')
-            self.show_notification(f'Ошибка в отправке данных', label_bg=self.colors.notification_color_red)
+            self.show_notification(f'Ошибка в отправке данных',
+                                   label_bg=self.colors.notification_color_red)
             return False
 
     def on_barcode_change(self, event=None):
@@ -506,13 +515,13 @@ class ReportGenerator:
             self.excise_frame.configure(border_color=self.colors.border_color_yellow)
             self.show_notification(f'Баркод обновлён', label_bg=self.colors.notification_color_yellow)
 
-        elif 0 < excise_len < 150:
+        elif 0 < excise_len < 150 and excise_len != 68:
             self.entry_excise.delete(0, tk.END)
             self.excise_frame.configure(border_color=self.colors.border_color_red)
-            self.show_notification(f'Неверный акциз (длина {excise_len} из 150)',
+            self.show_notification(f'Неверный акциз (длина {excise_len} из 68/150)',
                                    label_bg=self.colors.notification_color_red)
 
-        else:  # excise_len >= 150
+        else:  # excise_len >= 150 or == 68
             self.excise_frame.configure(border_color=self.colors.border_color_green)
 
             if barcode_len == 13 and barcode.isdigit():
@@ -543,7 +552,8 @@ class ReportGenerator:
         try:
             if not self.db.check_connection():
                 self.update_connection_indicator()
-                return self.show_notification(f'Нет соединения с БД', label_bg=self.colors.notification_color_red)
+                return self.show_notification(f'Нет соединения с БД',
+                                              label_bg=self.colors.notification_color_red)
 
             data = []
             if self.db.check_connection():
@@ -578,14 +588,14 @@ class ReportGenerator:
             ws.range('F:F').api.NumberFormat = '@'
             ws.range('G:G').api.NumberFormat = '@'
 
-            # центрируем столбец A (баркод) по горизонтали
+            # центрируем столбцы по горизонтали
             ws.range('A:A').api.HorizontalAlignment = -4108
             ws.range('D:D').api.HorizontalAlignment = -4108
             ws.range('E:E').api.HorizontalAlignment = -4108
             ws.range('F:F').api.HorizontalAlignment = -4108
             ws.range('G:G').api.HorizontalAlignment = -4108
 
-            # включаем перенос текста и уменьшение шрифта для колонки B
+            # включаем перенос текста и уменьшение шрифта
             ws.range('B:B').api.WrapText = True
             ws.range('B:B').api.ShrinkToFit = True
             ws.range('D:D').api.WrapText = True
@@ -609,23 +619,23 @@ class ReportGenerator:
                 if os.path.exists(absolute_qr_path):
                     cell = ws.range((idx, 3))
 
-                    pic = ws.pictures.add(absolute_qr_path,
-                                          left=cell.left + 4,
-                                          top=cell.top + 2,
-                                          width=77,
-                                          height=77)
+                    ws.pictures.add(absolute_qr_path,
+                                    left=cell.left + 4,
+                                    top=cell.top + 2,
+                                    width=77,
+                                    height=77)
                     ws.range((idx, 3)).row_height = 80
                 else:
                     ws.range((idx, 3)).value = 'QR не найден'
 
             # настраиваем ширину колонок
-            ws.range('A:A').column_width = 20
-            ws.range('B:B').column_width = 50
-            ws.range('C:C').column_width = 15
-            ws.range('D:D').column_width = 50
-            ws.range('E:E').column_width = 15
-            ws.range('F:F').column_width = 15
-            ws.range('G:G').column_width = 20
+            ws.range('A:A').column_width = 20  # barcode
+            ws.range('B:B').column_width = 50  # excise
+            ws.range('C:C').column_width = 15  # qr
+            ws.range('D:D').column_width = 50  # qr path
+            ws.range('E:E').column_width = 15  # user_name
+            ws.range('F:F').column_width = 15  # computer_name
+            ws.range('G:G').column_width = 20  # created_date
 
             # сохраняем и закрываем
             wb.save(filename)
